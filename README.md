@@ -16,8 +16,9 @@ index.html
 
 **Flow Diagram**
 
+![FinalFlow for DIamante Issuance](https://github.com/user-attachments/assets/b71e38bf-5191-40f0-a9bb-e5fb8eeb19ef)
 
-![Diamante KYC Issuance Flow](https://github.com/user-attachments/assets/a0ac5795-9fed-40a3-98ba-ecbe38381cd4)
+
 
 
 Sequence Diagram Link -
