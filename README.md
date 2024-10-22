@@ -13,3 +13,8 @@ node index
 ## UI
 
 index.html
+
+**Flow Diagram**
+
+
+![Diamante KYC Issuance Flow](https://github.com/user-attachments/assets/a0ac5795-9fed-40a3-98ba-ecbe38381cd4)
