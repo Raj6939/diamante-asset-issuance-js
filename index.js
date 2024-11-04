@@ -107,21 +107,47 @@ app.use(cors()); // Enable CORS for all routes
 // });
 
 
+
+app.post('/masterAccount', async (req, res) => {
+  console.log('inside masterAccount Api')
+  const userWalletAddress = req.body.walletAddress
+  const masterWalletK = Keypair.random()
+  const server = new Aurora.Server("https://diamtestnet.diamcircle.io/");
+  const userAccount = await server.loadAccount(userWalletAddress);
+  const tx = new TransactionBuilder(userAccount, {
+    fee: BASE_FEE,
+    networkPassphrase: Networks.TESTNET,
+  })
+    .addOperation(
+      Operation.createAccount({
+        destination: masterWalletK.publicKey(),
+        startingBalance: "0.10000",
+        source: userWalletAddress, // The server wallet funds the account creation.
+      })
+    )
+    .setTimeout(0).build();
+  const xdr = tx.toXDR();
+  res.status(200).json({
+    message: "Asset creation request received",
+    xdr: xdr, // Return the XDR of the transaction for further submission.
+    walletAddress: masterWalletK.publicKey(),
+    pubKey: masterWalletK.secret()
+  });
+})
 // This is an API route that listens for POST requests to "/createAsset".
 // The route is used to create an asset on the DiamCircle blockchain and associate metadata with it.
 app.post("/createAsset", async (req, res) => {
   
   // Extract userAddress, assetName, and metadata from the incoming request body.
-  var { userAddress, assetName, metadata } = req.body;
+  var { userAddress, assetName, metadata, serverPubKey } = req.body;
 
   // Log the received data to the console for debugging purposes.
-  console.log("Received data:", { userAddress, assetName, metadata });
+  console.log("Received data:", { userAddress, assetName, metadata, serverPubKey });
 
   // Server wallet (main account) is fetched from server-side storage (in this case, hard-coded for simplicity).
-  const serverWallet = Keypair.fromSecret(
-    "SAAW2UGWLV2SOP2GULMDXK4NTHQT3JXUNFYAKFRMRPR2DA7A4QY5VMWK" // Replace with secure secret management in production
+  let serverWallet = Keypair.fromSecret(
+    serverPubKey
   );
-
   // Create a new intermediary wallet (a temporary keypair for the asset creation process).
   const intermediaryWallet = Keypair.random();
 

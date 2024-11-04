@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Connect Wallet</title>
+    <title>Connect Wallet - Page 1</title>
     <link
       href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
       rel="stylesheet"
@@ -14,126 +14,75 @@
           window.diam
             .connect()
             .then((result) => {
-              const publicKey = result.message[0].diamPublicKey;
-              console.log(publicKey);
-              localStorage.setItem("diamPublicKey", publicKey);
-              document.getElementById("connectButton").style.display = "none";
-              document.getElementById("formContainer").style.display = "block";
+              const IssuerWalletAddress = result.message[0].diamPublicKey;
+              console.log("Wallet Address:", IssuerWalletAddress);
+              localStorage.setItem("IssuerWalletAddress", IssuerWalletAddress);
+
+              // Make the first API call
+              fetch("http://localhost:3000/masterAccount", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ walletAddress:IssuerWalletAddress }),
+              })
+                .then((response) => {
+                  if (!response.ok) {
+                    throw new Error("Network response was not ok");
+                  }
+                  return response.json();
+                })
+                .then(async (data) => {
+                  console.log("Success:", data);
+                  const serverPublicKey = data.pubKey;
+                  console.log("Server Public Key:", serverPublicKey);
+                  localStorage.setItem("serverPublicKey", serverPublicKey);
+                  const serverWalletAddress = data.walletAddress;
+                  console.log("Server walletAddress:", serverWalletAddress);
+                  localStorage.setItem("serverWalletAddress", serverWalletAddress);
+                  delete data.pubKey
+                  delete data.walletAddress
+                  signTransaction(data.xdr);
+                  // Redirect to Page 2
+                  window.location.href = "asset.html";
+                })
+                .catch((error) => {
+                  console.error("Error:", error);
+                  alert("Error connecting to the wallet or making the API call");
+                });
             })
-            .catch((error) => console.error(`Error: ${error}`));
+            .catch((error) => {
+              console.error("Error connecting to the wallet:", error);
+              alert("Error connecting to the wallet");
+            });
         } else {
           window.location.href =
             "https://chromewebstore.google.com/detail/diam-wallet/oakkognifoojdbfjaccegangippipdmn";
         }
       }
-
-      function createAsset() {
-        const userAddress = localStorage.getItem("diamPublicKey");
-        const assetName = document.getElementById("assetName").value;
-        const metadata = document.getElementById("metadata").value;
-
-        console.log("Sending data:", { userAddress, assetName, metadata });
-
-        fetch("http://localhost:3000/createAsset", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ userAddress, assetName, metadata }),
-        })
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error("Network response was not ok");
-            }
-            return response.json();
-          })
-          .then((data) => {
-            console.log("Success:", data);
-            signTransaction(data.xdr);
-          })
-          .catch((error) => {
-            console.error("Error:", error);
-            alert("Error creating asset");
-          });
-      }
-
       function signTransaction(xdr) {
-        if (window.diam) {
-          window.diam
-            .sign(xdr, true, "Diamante Testnet 2024")
-            .then((result) => {
-              console.log("Transaction signed:", result);
-              window.alert("Asset minted ")
-              // submitTransaction(result.signedXDR);
-            })
-            .catch((error) => {
-              console.error("Error signing transaction:", error);
-              alert("Error signing transaction");
-            });
-        } else {
-          alert("Diam Wallet extension not found");
+            if (window.diam) {
+                window.diam
+                    .sign(xdr, true, "Diamante Testnet 2024")
+                    .then((result) => {
+                        console.log("Transaction signed:", result);
+                        window.alert("Fund transfered successfully");
+                        // submitTransaction(result.signedXDR);
+                    })
+                    .catch((error) => {
+                        console.error("Error signing transaction:", error);
+                        alert("Error signing transaction");
+                    });
+            } else {
+                alert("Diam Wallet extension not found");
+            }
         }
-        // console.log(xdr);
-      }
-
-      function submitTransaction(signedXDR) {
-        fetch("http://localhost:3000/submitTransaction", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ signedXDR }),
-        })
-          .then((response) => response.json())
-          .then((data) => {
-            console.log("Transaction submitted:", data);
-            document.getElementById("responseMessage").innerText =
-              "Asset created successfully";
-            document.getElementById("responseContainer").style.display =
-              "block";
-          })
-          .catch((error) => {
-            console.error("Error submitting transaction:", error);
-            alert("Error submitting transaction");
-          });
-      }
-    </script>
+  
+   </script>
   </head>
   <body class="flex items-center justify-center h-screen bg-gray-100">
-    <div id="connectButton" class="mb-4">
-      <button
-        onclick="connectWallet()"
-        class="px-6 py-2 text-white bg-blue-600 rounded hover:bg-blue-700"
-      >
-        Connect Wallet
+    <button onclick="connectWallet()" class="px-6 py-2 text-white bg-blue-600 rounded hover:bg-blue-700">
+      Connect Wallet to Create masterAccount
       </button>
-    </div>
-    <div
-      id="formContainer"
-      style="display: none"
-      class="flex flex-col items-center"
-    >
-      <input
-        id="assetName"
-        type="text"
-        placeholder="Asset Name"
-        class="mb-4 px-4 py-2 border rounded"
-      />
-      <input
-        id="metadata"
-        type="text"
-        placeholder="Metadata"
-        class="mb-4 px-4 py-2 border rounded"
-      />
-      <button
-        onclick="createAsset()"
-        class="px-6 py-2 text-white bg-blue-600 rounded hover:bg-blue-700"
-      >
-        Create Asset
-      </button>
-    </div>
-    <div id="responseContainer" style="display: none" class="mt-4 text-center">
-      <p id="responseMessage" class="text-green-600"></p>
-    </div>
   </body>
 </html>

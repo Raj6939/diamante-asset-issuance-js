@@ -1,0 +1,84 @@
+<body class="flex items-center justify-center h-screen bg-gray-100">
+    <div class="flex flex-col items-center">
+        <button onclick="connectWallets()" class="px-6 py-2 text-white bg-blue-600 rounded hover:bg-blue-700 mb-4">
+            Connect Wallet
+        </button>
+        <input id="assetName" type="text" placeholder="Asset Name" class="mb-4 px-4 py-2 border rounded" />
+        <input id="metadata" type="text" placeholder="Metadata" class="mb-4 px-4 py-2 border rounded" />
+        <button onclick="createAsset()" class="px-6 py-2 text-white bg-blue-600 rounded hover:bg-blue-700">
+            Create Asset
+        </button>
+    </div>
+
+    <!-- Move your script here -->
+    <script>
+        function connectWallets() {
+            if (window.diam) {
+                window.diam
+                    .connect()
+                    .then((result) => {
+                        const walletAddress = result.message[0].diamPublicKey;
+                        localStorage.setItem("diamPublicKey", walletAddress);
+                        console.log("Wallet Address:", walletAddress);
+                    })
+                    .catch((error) => {
+                        console.error("Error connecting to the wallet:", error);
+                        alert("Error connecting to the wallet");
+                    });
+            } else {
+                alert("Diam Wallet extension not found");
+            }
+        }
+
+        function createAsset() {
+            const assetName = document.getElementById("assetName").value;
+            const metadata = document.getElementById("metadata").value;
+            const userWalletAddress = localStorage.getItem("diamPublicKey");
+            const serverPublicKey = localStorage.getItem("serverPublicKey");
+
+            fetch("http://localhost:3000/createAsset", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    userAddress: userWalletAddress,
+                    serverPubKey: serverPublicKey,
+                    assetName,
+                    metadata,
+                }),
+            })
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error("Network response was not ok");
+                    }
+                    return response.json();
+                })
+                .then((data) => {
+                    console.log("Success:", data);
+                    signTransaction(data.xdr);
+                })
+                .catch((error) => {
+                    console.error("Error:", error);
+                    alert("Error creating asset");
+                });
+        }
+
+        function signTransaction(xdr) {
+            if (window.diam) {
+                window.diam
+                    .sign(xdr, true, "Diamante Testnet 2024")
+                    .then((result) => {
+                        console.log("Transaction signed:", result);
+                        window.alert("Asset minted");
+                    })
+                    .catch((error) => {
+                        console.error("Error signing transaction:", error);
+                        alert("Error signing transaction");
+                    });
+            } else {
+                alert("Diam Wallet extension not found");
+            }
+        }
+    </script>
+</body>
